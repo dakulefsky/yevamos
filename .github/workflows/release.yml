@@ -1,0 +1,40 @@
+name: Validate and publish Yevamos
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yevamos-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check family relationships and saved cases
+        run: node test_model.cjs
+      - name: Validate, build, and publish
+        id: publish
+        uses: Otzaria/otzaria-plugin-validator@v1
+        with:
+          path: plugin
+          build: 'true'
+          otzaria-user: ${{ secrets.OTZARIA_USER }}
+          otzaria-password: ${{ secrets.OTZARIA_PASSWORD }}
+      - name: Save installable plugin
+        if: steps.publish.outputs.plugin-file != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: Yevamos-plugin
+          path: ${{ steps.publish.outputs.plugin-file }}
+          if-no-files-found: error

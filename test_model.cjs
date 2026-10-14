@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict'),M=require('./plugin/model.js');
+const c=M.empty(),dad=M.person(c,'male',300,300),son=M.person(c,'male',300,500);assert.equal(dad.name,'ראובן');assert.equal(son.name,'שמעון');M.connect(c,dad.id,son.id,'child');
+const brother=M.person(c,'male',600,500);M.connect(c,son.id,brother.id,'sibling');assert(M.parents(c,brother.id).includes(dad.id));assert.equal(M.siblings(c,son.id,brother.id),'אותו אב');
+const mom=M.person(c,'female',600,200);assert.equal(mom.name,'שרה');M.connect(c,son.id,mom.id,'parent');assert(M.parents(c,brother.id).includes(mom.id));assert.equal(M.siblings(c,son.id,brother.id),'אותם הורים');
+assert.equal(M.direction(dad,{x:300,y:100},'family'),'parent');assert.equal(M.direction(dad,{x:300,y:600},'family'),'child');assert.equal(M.direction(dad,{x:650,y:300},'family'),'sibling');assert.equal(M.direction(dad,{x:650,y:300},'marriage'),'marriage');
+const daughter=M.person(c,'female',900,500);M.connect(c,dad.id,daughter.id,'child',mom.id);assert.equal(M.siblings(c,son.id,daughter.id),'אותם הורים');
+const otherMom=M.person(c,'female',900,200),half=M.person(c,'male',1000,650);M.connect(c,dad.id,half.id,'child',otherMom.id);assert.equal(M.siblings(c,son.id,half.id),'אחים מן האב');
+assert.throws(()=>M.addEdge(c,son.id,dad.id,'parent'),/אב קדמון/);assert.throws(()=>M.connect(c,dad.id,son.id,'marriage'),/איש ואישה/);
+dad.status='deceased';assert(M.title(c).includes('ראובן נפטר'));assert.equal(M.validate({schemaVersion:2,cases:[c],active:0}).cases.length,1);
+assert.throws(()=>M.validate({schemaVersion:2,cases:[c,c],active:0}),/מזהים כפולים/);
+console.log('PASS: directional creation, automatic names, shared parents, propagated siblings, half-siblings, titles, cycle rejection and tabs');
+const large=M.empty();for(let i=0;i<100;i++)M.person(large,i%2?'female':'male',i*150-1000,Math.floor(i/10)*180-600);large.view={cx:2500,cy:-400,zoom:.25};const saved=M.validate({schemaVersion:2,cases:[large],active:0});assert.equal(saved.cases[0].people.length,100);assert.equal(saved.cases[0].people[99].x,13850);assert.equal(saved.cases[0].view.zoom,.25);assert.equal(saved.cases[0].view.cy,-400);assert.throws(()=>M.person(large,'male',0,0),/100/);console.log('PASS: large case capacity, expanded coordinates and persisted camera');
