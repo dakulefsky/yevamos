@@ -18,3 +18,11 @@ header .actions button{color:var(--color-primary);border-color:var(--color-borde
 .person .bubble-surface{stroke:var(--color-border)}.person[data-sex=female] .bubble-surface{stroke:var(--color-marriage)}.person.selected .bubble-surface{stroke:var(--color-primary)}.edge.parent{stroke:var(--color-primary)}.edge.marriage{stroke:var(--color-marriage)}.edge.sibling{stroke:var(--color-sibling)}
 .popup,dialog{box-shadow:0 18px 55px var(--color-scrim)}.popup-title{color:var(--color-primary)}footer{border-top-color:var(--color-border)}
 @media(max-width:550px){header{background:var(--color-header)}.case-heading{padding-top:14px}}
+
+#storage-warning{margin:0;padding:12px 24px;border-bottom:2px solid var(--color-deceased);background:var(--color-deceased-surface);color:var(--color-ink);font-weight:600}
+
+.case-heading-text{flex:1;min-width:0}#case-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+
+.person-finder{position:relative;display:flex;align-items:center;gap:10px;margin:0 0 12px}.person-finder label{margin:0;white-space:nowrap}.person-finder input{max-width:360px;flex:1;padding:8px 12px}#person-results{position:absolute;z-index:10;inset-inline-start:0;top:100%;width:min(600px,100%);max-height:260px;overflow:auto;padding:8px;background:var(--color-panel);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:0 8px 24px var(--color-scrim)}#person-results button{display:block;width:100%;text-align:start;margin:3px 0;font-size:.85rem}
+
+@media(min-width:801px){.board{height:max(430px,calc(100dvh - 360px))}}

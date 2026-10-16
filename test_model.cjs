@@ -10,3 +10,10 @@ dad.status='deceased';assert(M.title(c).includes('ראובן נפטר'));assert.
 assert.throws(()=>M.validate({schemaVersion:2,cases:[c,c],active:0}),/מזהים כפולים/);
 console.log('PASS: directional creation, automatic names, shared parents, propagated siblings, half-siblings, titles, cycle rejection and tabs');
 const large=M.empty();for(let i=0;i<100;i++)M.person(large,i%2?'female':'male',i*150-1000,Math.floor(i/10)*180-600);large.view={cx:2500,cy:-400,zoom:.25};const saved=M.validate({schemaVersion:2,cases:[large],active:0});assert.equal(saved.cases[0].people.length,100);assert.equal(saved.cases[0].people[99].x,13850);assert.equal(saved.cases[0].view.zoom,.25);assert.equal(saved.cases[0].view.cy,-400);assert.throws(()=>M.person(large,'male',0,0),/100/);console.log('PASS: large case capacity, expanded coordinates and persisted camera');
+const conflict=M.empty(),pa=M.person(conflict,'male',0,0),pb=M.person(conflict,'male',100,0),ca=M.person(conflict,'male',0,200),cb=M.person(conflict,'female',200,200);
+M.connect(conflict,pa.id,ca.id,'child');M.connect(conflict,pb.id,cb.id,'child');const before=JSON.stringify(conflict);
+assert.throws(()=>M.connect(conflict,ca.id,cb.id,'sibling'),/אב/);assert.equal(JSON.stringify(conflict),before);
+const clone=M.duplicateCase(c);assert.notEqual(clone.id,c.id);assert.deepEqual(clone.people.map(p=>p.name),c.people.map(p=>p.name));assert(clone.people.every(p=>!c.people.some(q=>q.id===p.id)));assert(clone.relations.every(r=>clone.people.some(p=>p.id===r.from)&&clone.people.some(p=>p.id===r.to)));assert.equal(M.validate({schemaVersion:2,cases:[c,clone],active:1}).active,1);
+const legacy=M.validateCase({...M.empty(),people:[{id:'legacy-name',name:'Yitzchak',sex:'male',status:'alive',x:0,y:0,notes:''}]});assert.equal(legacy.people[0].name,'יצחק');
+assert.throws(()=>M.person(M.empty(),'invalid',0,0),/נתוני/);
+console.log('PASS: failed multi-link operations are atomic, duplicated cases have independent identities and legacy Yitzchak maps to יצחק');

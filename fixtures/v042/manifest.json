@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "com.kulefsky.yevamos-family",
+  "name": "משפחות יבמות",
+  "version": "0.4.2",
+  "description": "בניית תרשימי משפחה ללימוד יבמות: בועות, קווי הורים ונישואין, שמות אוטומטיים, הערות ומספר מקרים. פועל ללא אינטרנט.",
+  "author": "Avi Kulefsky",
+  "stability": "beta",
+  "entrypoint": "index.html",
+  "minAppVersion": "0.9.97",
+  "sdkVersion": "1.x",
+  "permissions": [],
+  "network": {
+    "enabled": false,
+    "allowlist": []
+  },
+  "contributes": {
+    "toolTab": {
+      "title": "משפחות יבמות",
+      "order": 910,
+      "defaultPinned": true,
+      "iconName": "people_24_regular"
+    }
+  }
+}
