@@ -1,3 +1,7 @@
+## 0.8.2 — Otzaria theme colors
+
+Header and text now use matching surface roles, optional roles fall back to the current host palette, and person/death fills are subtle tints of the current panel. Scrims use transparency rather than an opaque host color. Light, dark, live changes and older theme payloads are tested.
+
 ## 0.8.1 — scroll to move, arrows to zoom
 
 Two-finger scrolling and the mouse wheel move the canvas vertically/horizontally without changing magnification. Pixel, line and page wheel units are normalized to the SVG coordinate system. Up/Down arrow keys zoom in/out outside text inputs, dialogs and other interactive controls. Existing plus/minus buttons and drag-to-pan remain available. Manual one-click Save from 0.8.0 is retained.
