@@ -6,14 +6,31 @@ let recoveryBackup='',storageReadable=true;
 try{
  recoveryBackup=localStorage.getItem(key+'-recovery')||'';
  const saved=localStorage.getItem(key)||localStorage.getItem('yevamos-family-builder-v1');
- if(saved){try{work=M.validate(JSON.parse(saved));}catch(e){recoveryBackup=saved;try{localStorage.setItem(key+'-recovery',saved);}catch{}$('message').textContent='לא ניתן לטעון את המקרים השמורים. הנתונים המקוריים זמינים בשמירה וטעינה.';}}
+ if(saved){try{work=M.validate(JSON.parse(saved));}catch(e){recoveryBackup=saved;try{localStorage.setItem(key+'-recovery',saved);}catch{}$('message').textContent='לא ניתן לטעון את המקרים השמורים. הנתונים המקוריים זמינים בכלים ← גיבוי ושחזור.';}}
 }catch(e){storageReadable=false;$('message').textContent='לא ניתן לגשת לשמירה המקומית. ניתן ליצור מקרים ולשמור גיבוי בקובץ.';$('storage-warning').hidden=false;$('storage-warning').textContent='השמירה המקומית אינה זמינה. הורידו גיבוי לפני סגירת החלון; לאחר חזרת הגישה יש לפתוח את התוסף מחדש.';}
 
 
 const current=()=>work.cases[work.active],person=id=>current().people.find(p=>p.id===id);
 function say(t){$('message').textContent=t;}
 function snapshot(){future=[];history.push(JSON.stringify(work));if(history.length>50)history.shift();}
-function save(){try{if(!storageReadable)throw Error('Storage was unreadable at startup');if(recoveryBackup&&localStorage.getItem(key+'-recovery')!==recoveryBackup)localStorage.setItem(key+'-recovery',recoveryBackup);localStorage.setItem(key,JSON.stringify(work));$('storage-warning').hidden=true;}catch(e){$('storage-warning').hidden=false;$('storage-warning').textContent='השינויים פתוחים כאן אך לא נשמרו במכשיר. הורידו גיבוי מתוך שמירה וטעינה לפני סגירת החלון.';}$('undo').disabled=!history.length;$('redo').disabled=!future.length;}
+let savedState=JSON.stringify(work);
+function isDirty(){return JSON.stringify(work)!==savedState;}
+function save(explicit=false){
+ if(explicit){
+  try{
+   if(!storageReadable)throw Error('Storage was unreadable at startup');
+   if(recoveryBackup&&localStorage.getItem(key+'-recovery')!==recoveryBackup)localStorage.setItem(key+'-recovery',recoveryBackup);
+   localStorage.setItem(key,JSON.stringify(work));savedState=JSON.stringify(work);$('storage-warning').hidden=true;
+  }catch(e){$('storage-warning').hidden=false;$('storage-warning').textContent='לא ניתן לשמור במכשיר. המקרים עדיין פתוחים כאן. גיבוי נוסף זמין בכלים ← גיבוי ושחזור.';}
+ }
+ $('save-status').textContent=isDirty()?'יש שינויים שלא נשמרו':'כל השינויים שמורים';
+ if(explicit&&!isDirty()&&$('storage-warning').hidden)$('save-status').textContent='כל המקרים נשמרו';
+ if(explicit&&!$('storage-warning').hidden)$('save-status').textContent='השמירה לא הצליחה';
+ $('undo').disabled=!history.length;$('redo').disabled=!future.length;
+}
+$('save-work').onclick=()=>save(true);
+window.addEventListener('beforeunload',e=>{if(isDirty()){e.preventDefault();e.returnValue='';}});
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save(true);}});
 function transaction(fn){const before=JSON.stringify(work);try{fn();work=M.validate(work);if(JSON.stringify(work)===before){render();return true;}future=[];history.push(before);if(history.length>50)history.shift();save();render();return true;}catch(e){work=JSON.parse(before);say(e.message);render();return false;}}
 function closePopups(){$('context-menu').hidden=true;$('gender-picker').hidden=true;pending=null;}
 function cancel(){mode=null;cursor=null;closePopups();$('cancel').hidden=true;$('place-preview').hidden=true;$('instruction').textContent='לחיצה ימנית על בועה להרחבת המשפחה. לחיצה כפולה לעריכה.';draw();}
@@ -108,7 +125,7 @@ $('backup-file').onchange=async e=>{
 $('download-recovery').onclick=()=>downloadFile(recoveryBackup,'text/plain;charset=utf-8','Yevamos-Recovery.txt');
 $('recover-backup').onclick=()=>{$('case-json').value=recoveryBackup;$('backup-message').textContent='אלה הנתונים המקוריים שלא נטענו. אפשר להעתיקם ולשמור אותם בנפרד.';};
 $('backup').onclick=()=>{cancel();$('recover-backup').hidden=!recoveryBackup;$('download-recovery').hidden=!recoveryBackup;$('case-json').value=JSON.stringify(work,null,2);$('backup-message').textContent='';$('backup-dialog').showModal();};$('select-backup').onclick=()=>{$('case-json').focus();$('case-json').select();};$('close-backup').onclick=()=>$('backup-dialog').close();$('load-backup').onclick=()=>{try{const next=M.validate(JSON.parse($('case-json').value));snapshot();work=next;selected=null;save();render();$('backup-dialog').close();}catch(e){$('backup-message').textContent=e instanceof SyntaxError?'טקסט הגיבוי אינו תקין. בדקו שהועתק במלואו.':e.message;}};
-document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.target.closest('input,textarea,select,dialog')){const k=e.key.toLowerCase();if(k==='z'||k==='y'){e.preventDefault();if(k==='y'||e.shiftKey)$('redo').click();else $('undo').click();return;}}if(e.key==='Escape'){cancel();panMode=false;$('pan-tool').setAttribute('aria-pressed','false');}if(e.code==='Space'&&!e.target.closest('input,textarea,select,button,dialog')){e.preventDefault();spaceDown=true;}});document.addEventListener('pointerdown',e=>{if(!e.target.closest('.popup')&&!e.target.closest('svg')&&!e.target.closest('#add'))closePopups();});
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.target.closest('input,textarea,select,dialog')){const k=e.key.toLowerCase();if(k==='z'||k==='y'){e.preventDefault();if(k==='y'||e.shiftKey)$('redo').click();else $('undo').click();return;}}if(e.key==='Escape'){cancel();panMode=false;$('pan-tool').setAttribute('aria-pressed','false');}if(['ArrowUp','ArrowDown'].includes(e.key)&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.target.closest('input,textarea,select,button,summary,a,dialog,[contenteditable],.popup')){e.preventDefault();zoom(e.key==='ArrowUp'?1.25:.8);return;}if(e.code==='Space'&&!e.target.closest('input,textarea,select,button,dialog')){e.preventDefault();spaceDown=true;}});document.addEventListener('pointerdown',e=>{if(!e.target.closest('.popup')&&!e.target.closest('svg')&&!e.target.closest('#add'))closePopups();});
 function normalizePerson(text){return String(text).normalize('NFKD').replace(/[\u0591-\u05c7]/g,'').toLowerCase();}
 function renderPersonSearch(){
  const query=normalizePerson($('person-search').value.trim()),list=$('person-results');list.replaceChildren();list.hidden=!query;$('clear-person-search').hidden=!query;if(!query)return;
@@ -124,7 +141,14 @@ $('zoom-in').onclick=()=>zoom(1.25);$('zoom-out').onclick=()=>zoom(.8);$('home-v
 $('fit').onclick=()=>{const people=current().people;if(!people.length){current().view={cx:600,cy:400,zoom:1};}else{const xs=people.map(p=>p.x),ys=people.map(p=>p.y),r=$('diagram').getBoundingClientRect(),w=Math.max(Math.max(...xs)-Math.min(...xs)+260,(Math.max(...ys)-Math.min(...ys)+340)*r.width/r.height);current().view={cx:(Math.max(...xs)+Math.min(...xs))/2,cy:(Math.max(...ys)+Math.min(...ys))/2+30,zoom:Math.max(M.MIN_ZOOM,Math.min(1.3,1200/w))};}applyView();save();};
 $('pan-tool').onclick=()=>{cancel();panMode=!panMode;$('pan-tool').setAttribute('aria-pressed',String(panMode));$('diagram').classList.toggle('pan-ready',panMode);};
 function beginPan(e){e.preventDefault();closePopups();const v=view();panning={x:e.clientX,y:e.clientY,cx:v.cx,cy:v.cy};$('diagram').setPointerCapture(e.pointerId);$('diagram').classList.add('panning');}
-$('diagram').addEventListener('wheel',e=>{e.preventDefault();zoom(Math.exp(-e.deltaY*.0015),e);},{passive:false});document.addEventListener('keyup',e=>{if(e.code==='Space')spaceDown=false;});window.addEventListener('blur',()=>{spaceDown=false;panning=null;});window.addEventListener('resize',applyView);
+$('diagram').addEventListener('wheel',e=>{
+ e.preventDefault();
+ const board=$('diagram'),matrix=board.getScreenCTM();if(!matrix)return;
+ const rect=board.getBoundingClientRect(),inverse=matrix.inverse();
+ const dx=e.deltaX*(e.deltaMode===1?16:e.deltaMode===2?rect.width:1),dy=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?rect.height:1);
+ const v=view();v.cx+=inverse.a*dx+inverse.c*dy;v.cy+=inverse.b*dx+inverse.d*dy;
+ applyView();save();
+},{passive:false});document.addEventListener('keyup',e=>{if(e.code==='Space')spaceDown=false;});window.addEventListener('blur',()=>{spaceDown=false;panning=null;});window.addEventListener('resize',applyView);
 function descendantIds(id){const seen=new Set(),todo=[id];while(todo.length){const cur=todo.pop();for(const r of current().relations)if(r.kind==='parent'&&r.from===cur&&!seen.has(r.to)){seen.add(r.to);todo.push(r.to);}}return seen;}
 function parentChoices(id){const c=current(),blocked=descendantIds(id),ids=M.parents(c,id);for(const [field,sex]of [['father','male'],['mother','female']]){const select=$(field);select.replaceChildren();const blank=document.createElement('option');blank.value='';blank.textContent='לא הוגדר';select.append(blank);for(const p of c.people.filter(p=>p.id!==id&&p.sex===sex&&!blocked.has(p.id))){const o=document.createElement('option');o.value=p.id;o.textContent=p.name;select.append(o);}select.value=ids.find(pid=>person(pid).sex===sex)||'';}}
 function connectionTargets(){const source=person(menuId),kind=$('connection-kind').value;const select=$('connection-target');select.replaceChildren();for(const p of current().people.filter(p=>p.id!==menuId&&(kind!=='marriage'||p.sex!==source.sex))){const o=document.createElement('option');o.value=p.id;o.textContent=p.name;select.append(o);}}

@@ -1,3 +1,11 @@
+## 0.8.1 — scroll to move, arrows to zoom
+
+Two-finger scrolling and the mouse wheel move the canvas vertically/horizontally without changing magnification. Pixel, line and page wheel units are normalized to the SVG coordinate system. Up/Down arrow keys zoom in/out outside text inputs, dialogs and other interactive controls. Existing plus/minus buttons and drag-to-pan remain available. Manual one-click Save from 0.8.0 is retained.
+
+## 0.8.0 — one manual Save button
+
+Click **שמור** to save all cases on this device, with their automatically derived titles. There is no save name, file picker, or dialog. Edits remain in memory until Save (or Ctrl/Cmd+S). A small status indicates unsaved changes. The browser can warn before leaving with unsaved changes. Existing saved cases load as before; storage keys and case data are unchanged. Backup/import/recovery tools are available under **כלים → גיבוי ושחזור**.
+
 # חידושי גרסה 0.7.0
 
 נוסף איתור דמות לפי שם או הערה במקרה הפתוח. בחירת תוצאה ממקדת את התרשים בדמות ומגדילה אותה לתצוגה קריאה, בלי לשנות את קשרי המשפחה.
