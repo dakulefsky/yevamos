@@ -23,6 +23,11 @@ jobs:
           node-version: '22'
       - name: Check family relationships and saved cases
         run: node test_model.cjs
+      - name: Test canvas navigation in Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+          node test_navigation.cjs
       - name: Validate, build, and publish
         id: publish
         uses: Otzaria/otzaria-plugin-validator@v1
