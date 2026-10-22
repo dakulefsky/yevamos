@@ -2,6 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const {chromium,executablePath}=require('./browser_support.cjs');
 (async()=>{const server=http.createServer((req,res)=>{try{const p=path.join(__dirname,'plugin',req.url==='/'?'index.html':req.url);res.setHeader('Content-Type',p.endsWith('.js')?'text/javascript':p.endsWith('.css')?'text/css':'text/html');res.end(fs.readFileSync(p));}catch{res.statusCode=404;res.end();}});await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({executablePath,args:['--no-sandbox']});try{
  const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));await page.goto('http://127.0.0.1:'+server.address().port);
+ assert.equal(await page.evaluate(()=>isDirty()),false);assert.equal(await page.locator('#choose-male').textContent(),'זכר');assert.equal(await page.locator('#choose-female').textContent(),'נקבה');
  let dialogs=0,downloads=0;page.on('dialog',d=>{dialogs++;d.dismiss()});page.on('download',()=>downloads++);
  await page.click('#add');await page.click('#choose-male');assert.equal(await page.evaluate(()=>localStorage.getItem('yevamos-bubbles-v2')),null);assert((await page.locator('#save-status').innerText()).includes('לא נשמרו'));
  await page.click('#save-work');assert.equal(await page.locator('dialog[open]').count(),0);assert.equal(downloads,0);assert.equal(dialogs,0);

@@ -1,3 +1,9 @@
+## 0.8.4 — clearer person labels
+
+The person picker uses זכר / נקבה; bubbles omit gender badges. Deceased people show a dark lower banner with white נפטר / נפטרה text, without the large X or dagger. Names and notes remain above the banner. Fresh empty sessions no longer immediately count as unsaved, and exported SVGs omit the selection highlight.
+
+Review findings and validation are recorded in [REVIEW.md](REVIEW.md).
+
 ## 0.8.2 — Otzaria theme colors
 
 Header and text now use matching surface roles, optional roles fall back to the current host palette, and person/death fills are subtle tints of the current panel. Scrims use transparency rather than an opaque host color. Light, dark, live changes and older theme payloads are tested.
