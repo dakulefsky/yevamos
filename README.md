@@ -1,3 +1,7 @@
+## 0.8.5 — store update
+
+Increased the manifest version for uploading the updated plugin. Author: DanTheMan. Includes the death banners and simplified person bubbles from 0.8.4.
+
 ## 0.8.4 — clearer person labels
 
 The person picker uses זכר / נקבה; bubbles omit gender badges. Deceased people show a dark lower banner with white נפטר / נפטרה text, without the large X or dagger. Names and notes remain above the banner. Fresh empty sessions no longer immediately count as unsaved, and exported SVGs omit the selection highlight.
