@@ -4,7 +4,7 @@
   "name": "משפחות יבמות",
   "version": "0.8.4",
   "description": "בניית תרשימי משפחה ללימוד יבמות: בועות, קווי הורים ונישואין, שמות אוטומטיים, הערות ומספר מקרים. פועל ללא אינטרנט.",
-  "author": "Avi Kulefsky",
+  "author": "DANTHEMAN",
   "stability": "beta",
   "entrypoint": "index.html",
   "minAppVersion": "0.9.97",
