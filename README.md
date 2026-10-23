@@ -1,6 +1,6 @@
 ## 0.8.5 — store update
 
-Increased the manifest version for uploading the updated plugin. Author: DanTheMan. Includes the death banners and simplified person bubbles from 0.8.4.
+Manifest ID: `com.dantheman.yevamos-family` for a separate store listing. Author: DanTheMan. Existing cases may need to be transferred using backup/import. Includes the death banners and simplified person bubbles from 0.8.4.
 
 ## 0.8.4 — clearer person labels
 

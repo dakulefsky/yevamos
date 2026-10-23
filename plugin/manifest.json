@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "com.kulefsky.yevamos-family",
+  "id": "com.dantheman.yevamos-family",
   "name": "משפחות יבמות",
   "version": "0.8.5",
   "description": "בניית תרשימי משפחה ללימוד יבמות: בועות, קווי הורים ונישואין, שמות אוטומטיים, הערות ומספר מקרים. פועל ללא אינטרנט.",
