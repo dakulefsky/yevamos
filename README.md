@@ -48,7 +48,7 @@ Click **שמור** to save all cases on this device, with their automatically de
 
 תוקן כיוון הקשר „ילד/ה של” בחיבור דמויות קיימות. חיבור מורכב שנדחה אינו משאיר קשרים חלקיים. נשמרו שמות עבריים, קווי ילדים משני הורים, פסי אחים, הערות וסימון פטירה בולט. הכלי מצייר את נתוני המקרה ואינו פוסק את דינו.
 
-לבנייה: `python3 build.py`. לבדיקות: `node test_model.cjs`, `node test_placement.cjs`, `node test_session.cjs` ו־`node visual_review.cjs`. בדיקת עומס: `node test_large_case.cjs` מכסה 12 מקרים ובהם 100 דמויות בכל מקרה. בדיקות דפדפן דורשות Playwright ו־Chromium; ניתן להגדיר `PLAYWRIGHT_CHROMIUM_EXECUTABLE`.
+לבנייה: `python3 build.py`. לבדיקות: `node test_model.cjs`, `node test_placement.cjs`, `node test_session.cjs` ו־`node test_theme.cjs` ו־`node test_session.cjs`. בדיקת עומס: `node test_large_case.cjs` מכסה 12 מקרים ובהם 100 דמויות בכל מקרה. בדיקות דפדפן דורשות Playwright ו־Chromium; ניתן להגדיר `PLAYWRIGHT_CHROMIUM_EXECUTABLE`.
 
 ## גרסה 0.4.0
 

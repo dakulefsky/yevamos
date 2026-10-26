@@ -28,6 +28,12 @@ jobs:
           npm install --no-save playwright
           npx playwright install --with-deps chromium
           node test_navigation.cjs
+          node test_placement.cjs
+          node test_session.cjs
+          node test_manual_save.cjs
+          node test_theme.cjs
+          node test_finder_recovery.cjs
+          node test_large_case.cjs
       - name: Validate, build, and publish
         id: publish
         uses: Otzaria/otzaria-plugin-validator@v1

@@ -33,3 +33,9 @@ header .actions button{color:var(--color-primary);border-color:var(--color-borde
 
 .death-banner{fill:#303436;pointer-events:none}
 .person .death-label{fill:#fff;font:700 1rem var(--font-ui);pointer-events:none}
+
+/* Let controls wrap rather than steal space from the family canvas. */
+.person-finder input{min-width:0}.case-heading .actions{flex-wrap:wrap}
+.popup{max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow:auto}
+dialog{max-height:90dvh;overflow:auto}
+@media(max-width:600px){header .actions{gap:6px}.person-finder{flex-wrap:wrap}.person-finder label{width:100%;font-size:.8rem}.person-finder input{max-width:none}.case-heading{align-items:flex-start;flex-wrap:wrap}.case-heading-text{flex-basis:100%}.case-heading .actions{gap:6px}.case-heading .actions button{font-size:.75rem;padding:8px}.canvas-tip{max-width:calc(100% - 20px);font-size:.7rem;line-height:1.5}.canvas-controls{flex-wrap:wrap;max-width:calc(100% - 20px)}}
