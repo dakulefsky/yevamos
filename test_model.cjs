@@ -14,6 +14,8 @@ const conflict=M.empty(),pa=M.person(conflict,'male',0,0),pb=M.person(conflict,'
 M.connect(conflict,pa.id,ca.id,'child');M.connect(conflict,pb.id,cb.id,'child');const before=JSON.stringify(conflict);
 assert.throws(()=>M.connect(conflict,ca.id,cb.id,'sibling'),/אב/);assert.equal(JSON.stringify(conflict),before);
 const clone=M.duplicateCase(c);assert.notEqual(clone.id,c.id);assert.deepEqual(clone.people.map(p=>p.name),c.people.map(p=>p.name));assert(clone.people.every(p=>!c.people.some(q=>q.id===p.id)));assert(clone.relations.every(r=>clone.people.some(p=>p.id===r.from)&&clone.people.some(p=>p.id===r.to)));assert.equal(M.validate({schemaVersion:2,cases:[c,clone],active:1}).active,1);
-const legacy=M.validateCase({...M.empty(),people:[{id:'legacy-name',name:'Yitzchak',sex:'male',status:'alive',x:0,y:0,notes:''}]});assert.equal(legacy.people[0].name,'יצחק');
+const legacy=M.validateCase({...M.empty(),people:[{id:'legacy-name',name:'Yitzchak',sex:'male',status:'alive',x:0,y:0,notes:''}]});assert.equal(legacy.people[0].name,'Yitzchak');
+const imported=M.validate({schemaVersion:1,people:legacy.people,relations:[]});assert.equal(imported.cases[0].people[0].name,'יצחק');
+legacy.people[0].name='David';assert.equal(M.validate({schemaVersion:2,cases:[legacy],active:0}).cases[0].people[0].name,'David');assert.equal(M.duplicateCase(legacy).people[0].name,'David');
 assert.throws(()=>M.person(M.empty(),'invalid',0,0),/נתוני/);
-console.log('PASS: failed multi-link operations are atomic, duplicated cases have independent identities and legacy Yitzchak maps to יצחק');
+console.log('PASS: failed multi-link operations are atomic, duplicated cases have independent identities and current custom names survive and schema-1 defaults migrate');
