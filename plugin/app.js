@@ -225,7 +225,7 @@ function zoom(factor,event){const anchor=event?point(event):null,v=view();v.zoom
 $('zoom-in').onclick=()=>zoom(1.25);$('zoom-out').onclick=()=>zoom(.8);$('home-view').onclick=()=>{view().zoom=1;applyView();save();};
 $('fit').onclick=()=>{const people=current().people;if(!people.length){current().view={cx:600,cy:400,zoom:1};}else{const xs=people.map(p=>p.x),ys=people.map(p=>p.y),r=$('diagram').getBoundingClientRect(),w=Math.max(Math.max(...xs)-Math.min(...xs)+260,(Math.max(...ys)-Math.min(...ys)+340)*r.width/r.height);current().view={cx:(Math.max(...xs)+Math.min(...xs))/2,cy:(Math.max(...ys)+Math.min(...ys))/2+30,zoom:Math.max(M.MIN_ZOOM,Math.min(1.3,1200/w))};}applyView();save();};
 $('pan-tool').onclick=()=>{cancel();panMode=!panMode;$('pan-tool').setAttribute('aria-pressed',String(panMode));$('diagram').classList.toggle('pan-ready',panMode);};
-function beginPan(e,createOnClick=false){e.preventDefault();closePopups();const v=view(),matrix=$('diagram').getScreenCTM().inverse();panning={x:e.clientX,y:e.clientY,cx:v.cx,cy:v.cy,sx:matrix.a,sy:matrix.d,point:point(e),createOnClick,moved:false};$('diagram').setPointerCapture(e.pointerId);$('diagram').classList.add('panning');}
+function beginPan(e,createOnClick=false){if(e.pointerType!=='touch')e.preventDefault();closePopups();const v=view(),matrix=$('diagram').getScreenCTM().inverse();panning={x:e.clientX,y:e.clientY,cx:v.cx,cy:v.cy,sx:matrix.a,sy:matrix.d,point:point(e),createOnClick,moved:false};$('diagram').setPointerCapture(e.pointerId);$('diagram').classList.add('panning');}
 $('diagram').addEventListener('wheel',e=>{
  e.preventDefault();
  const board=$('diagram'),matrix=board.getScreenCTM();if(!matrix)return;
