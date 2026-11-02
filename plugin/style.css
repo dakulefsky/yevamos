@@ -42,3 +42,12 @@ dialog{max-height:90dvh;overflow:auto}
 
 /* Keep multi-touch gestures inside the family canvas in embedded WebViews. */
 .board,#diagram{touch-action:none;-webkit-user-select:none;user-select:none}
+
+
+/* Focus mode: expand only the family canvas and keep its tools available. */
+.board:fullscreen,.board.expanded{width:100vw;height:100dvh;min-height:100dvh;max-height:100dvh;margin:0;border:0;border-radius:0;position:fixed;inset:0;z-index:1000;background-color:var(--color-panel)}
+.board:fullscreen #diagram,.board.expanded #diagram{width:100%;height:100%;}
+.board:fullscreen .canvas-controls,.board.expanded .canvas-controls{top:max(12px,env(safe-area-inset-top));inset-inline-start:max(12px,env(safe-area-inset-left));}
+.board:fullscreen .canvas-tip,.board.expanded .canvas-tip{bottom:max(12px,env(safe-area-inset-bottom));}
+body:has(.board.expanded){overflow:hidden}
+@media(max-width:550px){.board:fullscreen .canvas-controls,.board.expanded .canvas-controls{max-width:calc(100vw - 24px);}}

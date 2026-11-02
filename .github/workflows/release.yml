@@ -28,6 +28,7 @@ jobs:
           npm install --no-save playwright
           npx playwright install --with-deps chromium
           node test_navigation.cjs
+          node test_pinch_zoom.cjs
           node test_placement.cjs
           node test_session.cjs
           node test_manual_save.cjs
