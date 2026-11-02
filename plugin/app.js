@@ -231,3 +231,25 @@ function applyTheme(p){
 if(window.Otzaria){Otzaria.on('theme.changed',applyTheme);Otzaria.on('plugin.boot',p=>applyTheme(p.theme));}
 render();
 savedState=JSON.stringify(work);save();
+
+
+// Full-screen focus mode. Prefer native fullscreen; use an in-app overlay
+// when the embedded WebView does not expose the Fullscreen API.
+const fullscreenBoard=$('diagram').closest('.board');
+const fullscreenButton=$('fullscreen-toggle');
+function syncFullscreenControl(){
+ const active=Boolean(document.fullscreenElement===fullscreenBoard||fullscreenBoard.classList.contains('expanded'));
+ fullscreenButton.textContent=active?'יציאה ממסך מלא':'מסך מלא';
+ fullscreenButton.setAttribute('aria-pressed',String(active));
+}
+fullscreenButton.onclick=async()=>{
+ if(document.fullscreenElement===fullscreenBoard){try{await document.exitFullscreen();}catch{fullscreenBoard.classList.remove('expanded');}}
+ else if(fullscreenBoard.classList.contains('expanded'))fullscreenBoard.classList.remove('expanded');
+ else if(fullscreenBoard.requestFullscreen){try{await fullscreenBoard.requestFullscreen();}catch{fullscreenBoard.classList.add('expanded');}}
+ else fullscreenBoard.classList.add('expanded');
+ syncFullscreenControl();applyView();
+};
+document.addEventListener('fullscreenchange',()=>{syncFullscreenControl();applyView();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&fullscreenBoard.classList.contains('expanded')){fullscreenBoard.classList.remove('expanded');syncFullscreenControl();applyView();}});
+window.addEventListener('resize',applyView);
+syncFullscreenControl();
