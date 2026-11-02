@@ -95,57 +95,50 @@ $('diagram').onpointermove=e=>{if(panning){const dx=e.clientX-panning.x,dy=e.cli
 function endDrag(e){if(panning){const pan=panning;panning=null;$('diagram').classList.remove('panning');if(pan.moved){save();}else if(pan.createOnClick&&e?.type==='pointerup'){finish(pan.point,pan.x,pan.y);}return;}if(!drag)return;if(drag.moved){future=[];history.push(drag.before);if(history.length>50)history.shift();save();}drag=null;}
 $('diagram').onpointerup=endDrag;$('diagram').onpointercancel=endDrag;$('diagram').onlostpointercapture=endDrag;
 
-// Two-finger touch gestures zoom around the midpoint between the fingers.
-// A pinch takes priority over a person drag or canvas pan; the remaining finger
-// is ignored until it is lifted, so a pinch never turns into an accidental drag.
-const touchPointers=new Map();
-let pinch=null,suppressTouchUntilClear=false;
-function touchMidpoint(){
- const pts=[...touchPointers.values()];
- return {x:(pts[0].x+pts[1].x)/2,y:(pts[0].y+pts[1].y)/2,distance:Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y)};
+// Native Touch Events are used for pinch zoom for compatibility with Otzaria's
+// embedded Android WebView. Pointer Events remain responsible for one-finger editing.
+let touchPinch=null,touchGestureActive=false;
+function touchMidpoint(touches){
+ const a=touches[0],b=touches[1];
+ return {x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2,distance:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)};
 }
 function worldAtScreen(x,y,v,r){
  const unit=1200/(r.width*v.zoom);
  return {x:v.cx+(x-(r.left+r.width/2))*unit,y:v.cy+(y-(r.top+r.height/2))*unit};
 }
-function consumeTouchEvent(e){e.preventDefault();e.stopImmediatePropagation();}
-$('diagram').addEventListener('pointerdown',e=>{
- if(e.pointerType!=='touch')return;
- touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
- if(suppressTouchUntilClear){consumeTouchEvent(e);return;}
- if(touchPointers.size<2)return;
+function consumeTouchEvent(e){if(e.cancelable)e.preventDefault();e.stopImmediatePropagation();}
+const board=$('diagram');
+board.addEventListener('touchstart',e=>{
+ if(e.touches.length<2)return;
  consumeTouchEvent(e);
- const board=$('diagram');
- for(const id of touchPointers.keys())try{board.setPointerCapture(id);}catch{}
- drag=null;panning=null;
- board.classList.remove('panning');
- const mid=touchMidpoint(),v=view(),r=board.getBoundingClientRect();
- pinch={distance:Math.max(1,mid.distance),zoom:v.zoom,anchor:worldAtScreen(mid.x,mid.y,v,r)};
- suppressTouchUntilClear=true;
-}, {capture:true,passive:false});
-$('diagram').addEventListener('pointermove',e=>{
- if(e.pointerType!=='touch'||!touchPointers.has(e.pointerId))return;
- touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
- if(!pinch&&!suppressTouchUntilClear)return;
+ const mid=touchMidpoint(e.touches),v=view(),r=board.getBoundingClientRect();
+ if(!touchGestureActive){
+  // Cancel any one-finger action that began before the second finger landed.
+  drag=null;panning=null;board.classList.remove('panning');
+  touchGestureActive=true;
+ }
+ touchPinch={distance:Math.max(1,mid.distance),zoom:v.zoom,anchor:worldAtScreen(mid.x,mid.y,v,r)};
+},{capture:true,passive:false});
+board.addEventListener('touchmove',e=>{
+ if(!touchGestureActive||e.touches.length<2)return;
  consumeTouchEvent(e);
- if(!pinch||touchPointers.size<2)return;
- const mid=touchMidpoint(),r=$('diagram').getBoundingClientRect(),v=view();
- v.zoom=Math.max(M.MIN_ZOOM,Math.min(M.MAX_ZOOM,pinch.zoom*mid.distance/pinch.distance));
+ const mid=touchMidpoint(e.touches),r=board.getBoundingClientRect(),v=view();
+ v.zoom=Math.max(M.MIN_ZOOM,Math.min(M.MAX_ZOOM,touchPinch.zoom*mid.distance/touchPinch.distance));
  const unit=1200/(r.width*v.zoom);
- v.cx=pinch.anchor.x-(mid.x-(r.left+r.width/2))*unit;
- v.cy=pinch.anchor.y-(mid.y-(r.top+r.height/2))*unit;
+ v.cx=touchPinch.anchor.x-(mid.x-(r.left+r.width/2))*unit;
+ v.cy=touchPinch.anchor.y-(mid.y-(r.top+r.height/2))*unit;
  applyView();
-}, {capture:true,passive:false});
-function finishTouchGesture(e){
- if(e.pointerType!=='touch'||!touchPointers.has(e.pointerId))return;
- const wasPinching=!!pinch||suppressTouchUntilClear;
- touchPointers.delete(e.pointerId);
- if(wasPinching)consumeTouchEvent(e);
- if(touchPointers.size<2&&pinch){pinch=null;save();}
- if(touchPointers.size===0)suppressTouchUntilClear=false;
+},{capture:true,passive:false});
+function finishTouchPinch(e){
+ if(!touchGestureActive)return;
+ consumeTouchEvent(e);
+ if(e.touches.length<2){
+  touchPinch=null;
+  if(e.touches.length===0){touchGestureActive=false;save();}
+ }
 }
-$('diagram').addEventListener('pointerup',finishTouchGesture,{capture:true,passive:false});
-$('diagram').addEventListener('pointercancel',finishTouchGesture,{capture:true,passive:false});
+board.addEventListener('touchend',finishTouchPinch,{capture:true,passive:false});
+board.addEventListener('touchcancel',finishTouchPinch,{capture:true,passive:false});
 
 $('add').onclick=()=>{cancel();const box=$('diagram').getBoundingClientRect();const n=current().people.length;finish({x:view().cx+(n%3-1)*150/view().zoom,y:view().cy},Math.min(innerWidth-260,box.left+box.width/2),Math.min(innerHeight-220,box.top+150));};
 function edit(id){cancel();menuId=id;const p=person(id);for(const field of ['name','sex','status','notes'])$(field).value=p[field];$('sex').disabled=current().relations.some(r=>r.kind==='marriage'&&(r.from===id||r.to===id));parentChoices(id);noteTags();$('edit-message').textContent='';$('edit-dialog').showModal();}
