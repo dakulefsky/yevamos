@@ -1,3 +1,7 @@
+## 0.8.9 — embedded WebView pinch handling
+
+Pinch events are captured at the document level in capture phase for better compatibility with Otzaria's Android WebView. Once a multi-touch gesture starts, remaining fingers are prevented from triggering one-finger edits or panning until all fingers are lifted. The zoom remains anchored to the fingers' midpoint.
+
 ## 0.8.7 — pinch to zoom
 
 Two-finger pinch gestures zoom the family canvas around the midpoint between the fingers. Pinching does not accidentally drag people or move the canvas; existing one-finger interactions, wheel/trackpad panning, arrow-key zoom, zoom buttons and fit-family controls remain available.
