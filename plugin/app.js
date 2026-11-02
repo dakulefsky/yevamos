@@ -95,60 +95,67 @@ $('diagram').onpointermove=e=>{if(panning){const dx=e.clientX-panning.x,dy=e.cli
 function endDrag(e){if(panning){const pan=panning;panning=null;$('diagram').classList.remove('panning');if(pan.moved){save();}else if(pan.createOnClick&&e?.type==='pointerup'){finish(pan.point,pan.x,pan.y);}return;}if(!drag)return;if(drag.moved){future=[];history.push(drag.before);if(history.length>50)history.shift();save();}drag=null;}
 $('diagram').onpointerup=endDrag;$('diagram').onpointercancel=endDrag;$('diagram').onlostpointercapture=endDrag;
 
-// Use document-capture Touch Events: some embedded Android WebViews do not
-// reliably deliver multi-touch listeners attached directly to an SVG element.
-// Pointer Events continue to handle ordinary one-finger editing and panning.
-let touchPinch=null,touchGestureActive=false;
+// Track touch pointers at document capture so a second finger can take
+// over before the SVG's one-finger pan/drag handlers run.
 const board=$('diagram');
-function touchPair(touches){
- const a=touches[0],b=touches[1];
- return {x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2,distance:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)};
+const activeTouchPointers=new Map();
+let pointerPinch=null,pointerPinchActive=false;
+function pointerPair(){
+ const pts=[...activeTouchPointers.values()];
+ const a=pts[0],b=pts[1];
+ return {x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.hypot(a.x-b.x,a.y-b.y)};
 }
 function worldAtScreen(x,y,v,r){
  const unit=1200/(r.width*v.zoom);
  return {x:v.cx+(x-(r.left+r.width/2))*unit,y:v.cy+(y-(r.top+r.height/2))*unit};
 }
-function consumeTouchEvent(e){if(e.cancelable)e.preventDefault();e.stopImmediatePropagation();}
-function onCanvasTouch(e){return board.contains(e.target);}
-document.addEventListener('touchstart',e=>{
- if(!onCanvasTouch(e))return;
- if(e.touches.length<2){if(touchGestureActive)consumeTouchEvent(e);return;}
- consumeTouchEvent(e);
- if(!touchGestureActive){
-  // Cancel a one-finger drag or pan that started before the second finger landed.
+function consumePointerEvent(e){if(e.cancelable)e.preventDefault();e.stopImmediatePropagation();}
+function rebasePointerPinch(){
+ if(activeTouchPointers.size<2){pointerPinch=null;return;}
+ const mid=pointerPair(),v=view(),r=board.getBoundingClientRect();
+ pointerPinch={distance:Math.max(1,mid.distance),zoom:v.zoom,anchor:worldAtScreen(mid.x,mid.y,v,r)};
+}
+document.addEventListener('pointerdown',e=>{
+ if(e.pointerType!=='touch'||!board.contains(e.target))return;
+ activeTouchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(activeTouchPointers.size<2)return;
+ consumePointerEvent(e);
+ if(!pointerPinchActive){
+  // A second finger always cancels the in-progress one-finger pan or drag.
   drag=null;panning=null;board.classList.remove('panning');
-  touchGestureActive=true;
+  pointerPinchActive=true;
  }
- const mid=touchPair(e.touches),v=view(),r=board.getBoundingClientRect();
- touchPinch={distance:Math.max(1,mid.distance),zoom:v.zoom,anchor:worldAtScreen(mid.x,mid.y,v,r)};
-},{capture:true,passive:false});
-document.addEventListener('touchmove',e=>{
- if(!touchGestureActive||!onCanvasTouch(e))return;
- consumeTouchEvent(e);
- if(e.touches.length<2||!touchPinch)return;
- const mid=touchPair(e.touches),r=board.getBoundingClientRect(),v=view();
- v.zoom=Math.max(M.MIN_ZOOM,Math.min(M.MAX_ZOOM,touchPinch.zoom*mid.distance/touchPinch.distance));
+ rebasePointerPinch();
+},{capture:true});
+document.addEventListener('pointermove',e=>{
+ if(e.pointerType!=='touch'||!activeTouchPointers.has(e.pointerId))return;
+ activeTouchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(!pointerPinchActive)return;
+ consumePointerEvent(e);
+ if(activeTouchPointers.size<2||!pointerPinch)return;
+ const mid=pointerPair(),r=board.getBoundingClientRect(),v=view();
+ v.zoom=Math.max(M.MIN_ZOOM,Math.min(M.MAX_ZOOM,pointerPinch.zoom*mid.distance/pointerPinch.distance));
  const unit=1200/(r.width*v.zoom);
- v.cx=touchPinch.anchor.x-(mid.x-(r.left+r.width/2))*unit;
- v.cy=touchPinch.anchor.y-(mid.y-(r.top+r.height/2))*unit;
+ v.cx=pointerPinch.anchor.x-(mid.x-(r.left+r.width/2))*unit;
+ v.cy=pointerPinch.anchor.y-(mid.y-(r.top+r.height/2))*unit;
  applyView();
-},{capture:true,passive:false});
-function finishTouchGesture(e){
- if(!touchGestureActive||!onCanvasTouch(e))return;
- consumeTouchEvent(e);
- if(e.touches.length===0){
-  touchPinch=null;touchGestureActive=false;save();
- }else if(e.touches.length>=2){
-  // Rebase if a finger was lifted from a three-finger gesture.
-  const mid=touchPair(e.touches),v=view(),r=board.getBoundingClientRect();
-  touchPinch={distance:Math.max(1,mid.distance),zoom:v.zoom,anchor:worldAtScreen(mid.x,mid.y,v,r)};
+},{capture:true});
+function finishPointerGesture(e){
+ if(e.pointerType!=='touch'||!activeTouchPointers.has(e.pointerId))return;
+ if(pointerPinchActive)consumePointerEvent(e);
+ activeTouchPointers.delete(e.pointerId);
+ if(activeTouchPointers.size===0){
+  pointerPinch=null;pointerPinchActive=false;
+  if(e.type==='pointerup')save();
+ }else if(activeTouchPointers.size>=2){
+  rebasePointerPinch();
  }else{
-  // Keep consuming the remaining finger until the entire gesture ends.
-  touchPinch=null;
+  // Do not let the remaining finger resume a one-finger pan or drag.
+  pointerPinch=null;
  }
 }
-document.addEventListener('touchend',finishTouchGesture,{capture:true,passive:false});
-document.addEventListener('touchcancel',finishTouchGesture,{capture:true,passive:false});
+document.addEventListener('pointerup',finishPointerGesture,{capture:true});
+document.addEventListener('pointercancel',finishPointerGesture,{capture:true});
 
 $('add').onclick=()=>{cancel();const box=$('diagram').getBoundingClientRect();const n=current().people.length;finish({x:view().cx+(n%3-1)*150/view().zoom,y:view().cy},Math.min(innerWidth-260,box.left+box.width/2),Math.min(innerHeight-220,box.top+150));};
 function edit(id){cancel();menuId=id;const p=person(id);for(const field of ['name','sex','status','notes'])$(field).value=p[field];$('sex').disabled=current().relations.some(r=>r.kind==='marriage'&&(r.from===id||r.to===id));parentChoices(id);noteTags();$('edit-message').textContent='';$('edit-dialog').showModal();}
