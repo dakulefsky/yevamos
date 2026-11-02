@@ -118,6 +118,10 @@ function rebasePointerPinch(){
 document.addEventListener('pointerdown',e=>{
  if(e.pointerType!=='touch'||!board.contains(e.target))return;
  activeTouchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ // Capture every finger, including the second one whose pointerdown is
+ // intentionally stopped below. Without this, embedded WebViews can lose
+ // that pointer's move stream when its original hit target changes.
+ try{board.setPointerCapture(e.pointerId);}catch{}
  if(activeTouchPointers.size<2)return;
  consumePointerEvent(e);
  if(!pointerPinchActive){
