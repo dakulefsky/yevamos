@@ -94,6 +94,59 @@ $('diagram').onpointerdown=e=>{if(e.button!==0&&e.button!==1)return;if(!mode&&(p
 $('diagram').onpointermove=e=>{if(panning){const dx=e.clientX-panning.x,dy=e.clientY-panning.y;if(Math.hypot(dx,dy)>5)panning.moved=true;if(panning.moved){const v=view();v.cx=panning.cx-dx*panning.sx;v.cy=panning.cy-dy*panning.sy;applyView();}return;}if(drag){const q=clamp({x:point(e).x-drag.dx,y:point(e).y-drag.dy}),p=person(drag.id);if(Math.hypot(p.x-q.x,p.y-q.y)>3)drag.moved=true;if(drag.moved){p.x=q.x;p.y=q.y;const g=[...$('diagram').querySelectorAll('.person')].find(n=>n.dataset.personId===p.id);g.setAttribute('transform',`translate(${p.x},${p.y})`);drawEdges();}}else if(mode&&$('gender-picker').hidden){cursor=clamp(point(e));updatePreview();}};
 function endDrag(e){if(panning){const pan=panning;panning=null;$('diagram').classList.remove('panning');if(pan.moved){save();}else if(pan.createOnClick&&e?.type==='pointerup'){finish(pan.point,pan.x,pan.y);}return;}if(!drag)return;if(drag.moved){future=[];history.push(drag.before);if(history.length>50)history.shift();save();}drag=null;}
 $('diagram').onpointerup=endDrag;$('diagram').onpointercancel=endDrag;$('diagram').onlostpointercapture=endDrag;
+
+// Two-finger touch gestures zoom around the midpoint between the fingers.
+// A pinch takes priority over a person drag or canvas pan; the remaining finger
+// is ignored until it is lifted, so a pinch never turns into an accidental drag.
+const touchPointers=new Map();
+let pinch=null,suppressTouchUntilClear=false;
+function touchMidpoint(){
+ const pts=[...touchPointers.values()];
+ return {x:(pts[0].x+pts[1].x)/2,y:(pts[0].y+pts[1].y)/2,distance:Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y)};
+}
+function worldAtScreen(x,y,v,r){
+ const unit=1200/(r.width*v.zoom);
+ return {x:v.cx+(x-(r.left+r.width/2))*unit,y:v.cy+(y-(r.top+r.height/2))*unit};
+}
+function consumeTouchEvent(e){e.preventDefault();e.stopImmediatePropagation();}
+$('diagram').addEventListener('pointerdown',e=>{
+ if(e.pointerType!=='touch')return;
+ touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(suppressTouchUntilClear){consumeTouchEvent(e);return;}
+ if(touchPointers.size<2)return;
+ consumeTouchEvent(e);
+ const board=$('diagram');
+ for(const id of touchPointers.keys())try{board.setPointerCapture(id);}catch{}
+ drag=null;panning=null;
+ board.classList.remove('panning');
+ const mid=touchMidpoint(),v=view(),r=board.getBoundingClientRect();
+ pinch={distance:Math.max(1,mid.distance),zoom:v.zoom,anchor:worldAtScreen(mid.x,mid.y,v,r)};
+ suppressTouchUntilClear=true;
+}, {capture:true,passive:false});
+$('diagram').addEventListener('pointermove',e=>{
+ if(e.pointerType!=='touch'||!touchPointers.has(e.pointerId))return;
+ touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(!pinch&&!suppressTouchUntilClear)return;
+ consumeTouchEvent(e);
+ if(!pinch||touchPointers.size<2)return;
+ const mid=touchMidpoint(),r=$('diagram').getBoundingClientRect(),v=view();
+ v.zoom=Math.max(M.MIN_ZOOM,Math.min(M.MAX_ZOOM,pinch.zoom*mid.distance/pinch.distance));
+ const unit=1200/(r.width*v.zoom);
+ v.cx=pinch.anchor.x-(mid.x-(r.left+r.width/2))*unit;
+ v.cy=pinch.anchor.y-(mid.y-(r.top+r.height/2))*unit;
+ applyView();
+}, {capture:true,passive:false});
+function finishTouchGesture(e){
+ if(e.pointerType!=='touch'||!touchPointers.has(e.pointerId))return;
+ const wasPinching=!!pinch||suppressTouchUntilClear;
+ touchPointers.delete(e.pointerId);
+ if(wasPinching)consumeTouchEvent(e);
+ if(touchPointers.size<2&&pinch){pinch=null;save();}
+ if(touchPointers.size===0)suppressTouchUntilClear=false;
+}
+$('diagram').addEventListener('pointerup',finishTouchGesture,{capture:true,passive:false});
+$('diagram').addEventListener('pointercancel',finishTouchGesture,{capture:true,passive:false});
+
 $('add').onclick=()=>{cancel();const box=$('diagram').getBoundingClientRect();const n=current().people.length;finish({x:view().cx+(n%3-1)*150/view().zoom,y:view().cy},Math.min(innerWidth-260,box.left+box.width/2),Math.min(innerHeight-220,box.top+150));};
 function edit(id){cancel();menuId=id;const p=person(id);for(const field of ['name','sex','status','notes'])$(field).value=p[field];$('sex').disabled=current().relations.some(r=>r.kind==='marriage'&&(r.from===id||r.to===id));parentChoices(id);noteTags();$('edit-message').textContent='';$('edit-dialog').showModal();}
 $('edit-person').onclick=()=>edit(menuId);$('close-edit').onclick=()=>$('edit-dialog').close();$('edit-form').onsubmit=e=>{e.preventDefault();const ok=transaction(()=>{const p=person(menuId);for(const field of ['name','sex','status','notes'])p[field]=$(field).value.trim();const father=$('father').value,mother=$('mother').value;current().relations=current().relations.filter(r=>!(r.kind==='parent'&&r.to===p.id));for(const id of [father,mother])if(id)M.addEdge(current(),id,p.id,'parent');});if(ok)$('edit-dialog').close();else $('edit-message').textContent=$('message').textContent;};
