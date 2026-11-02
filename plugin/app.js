@@ -95,67 +95,88 @@ $('diagram').onpointermove=e=>{if(panning){const dx=e.clientX-panning.x,dy=e.cli
 function endDrag(e){if(panning){const pan=panning;panning=null;$('diagram').classList.remove('panning');if(pan.moved){save();}else if(pan.createOnClick&&e?.type==='pointerup'){finish(pan.point,pan.x,pan.y);}return;}if(!drag)return;if(drag.moved){future=[];history.push(drag.before);if(history.length>50)history.shift();save();}drag=null;}
 $('diagram').onpointerup=endDrag;$('diagram').onpointercancel=endDrag;$('diagram').onlostpointercapture=endDrag;
 
-// Track touch pointers at document capture so a second finger can take
-// over before the SVG's one-finger pan/drag handlers run.
+// Keep one-finger editing on Pointer Events, but use native Touch Events
+// for multi-touch zoom. Some embedded WebViews deliver Touch Events without
+// a complete Pointer Events stream for a second finger.
 const board=$('diagram');
-const activeTouchPointers=new Map();
-let pointerPinch=null,pointerPinchActive=false;
-function pointerPair(){
- const pts=[...activeTouchPointers.values()];
- const a=pts[0],b=pts[1];
- return {x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.hypot(a.x-b.x,a.y-b.y)};
-}
+const activeTouchPointers=new Set();
+let pointerPinchActive=false,touchPinch=null,touchGestureActive=false;
+function consumeTouchEvent(e){if(e.cancelable)e.preventDefault();e.stopImmediatePropagation();}
 function worldAtScreen(x,y,v,r){
  const unit=1200/(r.width*v.zoom);
  return {x:v.cx+(x-(r.left+r.width/2))*unit,y:v.cy+(y-(r.top+r.height/2))*unit};
 }
-function consumePointerEvent(e){if(e.cancelable)e.preventDefault();e.stopImmediatePropagation();}
-function rebasePointerPinch(){
- if(activeTouchPointers.size<2){pointerPinch=null;return;}
- const mid=pointerPair(),v=view(),r=board.getBoundingClientRect();
- pointerPinch={distance:Math.max(1,mid.distance),zoom:v.zoom,anchor:worldAtScreen(mid.x,mid.y,v,r)};
+function touchPair(touches){
+ const a=touches[0],b=touches[1];
+ return {x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2,distance:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)};
 }
+function rebaseTouchPinch(touches){
+ if(touches.length<2){touchPinch=null;return;}
+ const mid=touchPair(touches),v=view(),r=board.getBoundingClientRect();
+ touchPinch={distance:Math.max(1,mid.distance),zoom:v.zoom,anchor:worldAtScreen(mid.x,mid.y,v,r)};
+}
+// Track Pointer Events only to stop the ordinary one-finger handlers when a
+// second pointer arrives. The actual zoom calculation is driven by Touch Events.
 document.addEventListener('pointerdown',e=>{
  if(e.pointerType!=='touch'||!board.contains(e.target))return;
- activeTouchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ activeTouchPointers.add(e.pointerId);
  if(activeTouchPointers.size<2)return;
- consumePointerEvent(e);
+ e.stopImmediatePropagation();
  if(!pointerPinchActive){
-  // A second finger always cancels the in-progress one-finger pan or drag.
   drag=null;panning=null;board.classList.remove('panning');
   pointerPinchActive=true;
  }
- rebasePointerPinch();
 },{capture:true});
 document.addEventListener('pointermove',e=>{
- if(e.pointerType!=='touch'||!activeTouchPointers.has(e.pointerId))return;
- activeTouchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
- if(!pointerPinchActive)return;
- consumePointerEvent(e);
- if(activeTouchPointers.size<2||!pointerPinch)return;
- const mid=pointerPair(),r=board.getBoundingClientRect(),v=view();
- v.zoom=Math.max(M.MIN_ZOOM,Math.min(M.MAX_ZOOM,pointerPinch.zoom*mid.distance/pointerPinch.distance));
- const unit=1200/(r.width*v.zoom);
- v.cx=pointerPinch.anchor.x-(mid.x-(r.left+r.width/2))*unit;
- v.cy=pointerPinch.anchor.y-(mid.y-(r.top+r.height/2))*unit;
- applyView();
+ if(e.pointerType!=='touch'||!activeTouchPointers.has(e.pointerId)||!pointerPinchActive)return;
+ e.stopImmediatePropagation();
 },{capture:true});
 function finishPointerGesture(e){
  if(e.pointerType!=='touch'||!activeTouchPointers.has(e.pointerId))return;
- if(pointerPinchActive)consumePointerEvent(e);
+ if(pointerPinchActive)e.stopImmediatePropagation();
  activeTouchPointers.delete(e.pointerId);
- if(activeTouchPointers.size===0){
-  pointerPinch=null;pointerPinchActive=false;
-  if(e.type==='pointerup')save();
- }else if(activeTouchPointers.size>=2){
-  rebasePointerPinch();
- }else{
-  // Do not let the remaining finger resume a one-finger pan or drag.
-  pointerPinch=null;
- }
+ if(activeTouchPointers.size===0)pointerPinchActive=false;
 }
 document.addEventListener('pointerup',finishPointerGesture,{capture:true});
 document.addEventListener('pointercancel',finishPointerGesture,{capture:true});
+
+// Capture at document level because some Android WebViews retarget touch events
+// during a gesture. Keep consuming the remaining finger until all are lifted.
+document.addEventListener('touchstart',e=>{
+ if(!board.contains(e.target))return;
+ if(e.touches.length<2){if(touchGestureActive)consumeTouchEvent(e);return;}
+ consumeTouchEvent(e);
+ if(!touchGestureActive){
+  drag=null;panning=null;board.classList.remove('panning');
+  touchGestureActive=true;
+ }
+ rebaseTouchPinch(e.touches);
+},{capture:true,passive:false});
+document.addEventListener('touchmove',e=>{
+ if(!touchGestureActive||!board.contains(e.target))return;
+ consumeTouchEvent(e);
+ if(e.touches.length<2||!touchPinch)return;
+ const mid=touchPair(e.touches),r=board.getBoundingClientRect(),v=view();
+ v.zoom=Math.max(M.MIN_ZOOM,Math.min(M.MAX_ZOOM,touchPinch.zoom*mid.distance/touchPinch.distance));
+ const unit=1200/(r.width*v.zoom);
+ v.cx=touchPinch.anchor.x-(mid.x-(r.left+r.width/2))*unit;
+ v.cy=touchPinch.anchor.y-(mid.y-(r.top+r.height/2))*unit;
+ applyView();
+},{capture:true,passive:false});
+function finishTouchGesture(e){
+ if(!touchGestureActive||!board.contains(e.target))return;
+ consumeTouchEvent(e);
+ if(e.touches.length===0){
+  touchPinch=null;touchGestureActive=false;
+  if(e.type==='touchend')save();
+ }else if(e.touches.length>=2){
+  rebaseTouchPinch(e.touches);
+ }else{
+  touchPinch=null;
+ }
+}
+document.addEventListener('touchend',finishTouchGesture,{capture:true,passive:false});
+document.addEventListener('touchcancel',finishTouchGesture,{capture:true,passive:false});
 
 $('add').onclick=()=>{cancel();const box=$('diagram').getBoundingClientRect();const n=current().people.length;finish({x:view().cx+(n%3-1)*150/view().zoom,y:view().cy},Math.min(innerWidth-260,box.left+box.width/2),Math.min(innerHeight-220,box.top+150));};
 function edit(id){cancel();menuId=id;const p=person(id);for(const field of ['name','sex','status','notes'])$(field).value=p[field];$('sex').disabled=current().relations.some(r=>r.kind==='marriage'&&(r.from===id||r.to===id));parentChoices(id);noteTags();$('edit-message').textContent='';$('edit-dialog').showModal();}
@@ -204,7 +225,7 @@ function zoom(factor,event){const anchor=event?point(event):null,v=view();v.zoom
 $('zoom-in').onclick=()=>zoom(1.25);$('zoom-out').onclick=()=>zoom(.8);$('home-view').onclick=()=>{view().zoom=1;applyView();save();};
 $('fit').onclick=()=>{const people=current().people;if(!people.length){current().view={cx:600,cy:400,zoom:1};}else{const xs=people.map(p=>p.x),ys=people.map(p=>p.y),r=$('diagram').getBoundingClientRect(),w=Math.max(Math.max(...xs)-Math.min(...xs)+260,(Math.max(...ys)-Math.min(...ys)+340)*r.width/r.height);current().view={cx:(Math.max(...xs)+Math.min(...xs))/2,cy:(Math.max(...ys)+Math.min(...ys))/2+30,zoom:Math.max(M.MIN_ZOOM,Math.min(1.3,1200/w))};}applyView();save();};
 $('pan-tool').onclick=()=>{cancel();panMode=!panMode;$('pan-tool').setAttribute('aria-pressed',String(panMode));$('diagram').classList.toggle('pan-ready',panMode);};
-function beginPan(e,createOnClick=false){e.preventDefault();closePopups();const v=view(),matrix=$('diagram').getScreenCTM().inverse();panning={x:e.clientX,y:e.clientY,cx:v.cx,cy:v.cy,sx:matrix.a,sy:matrix.d,point:point(e),createOnClick,moved:false};$('diagram').setPointerCapture(e.pointerId);$('diagram').classList.add('panning');}
+function beginPan(e,createOnClick=false){if(e.pointerType!=='touch')e.preventDefault();closePopups();const v=view(),matrix=$('diagram').getScreenCTM().inverse();panning={x:e.clientX,y:e.clientY,cx:v.cx,cy:v.cy,sx:matrix.a,sy:matrix.d,point:point(e),createOnClick,moved:false};$('diagram').setPointerCapture(e.pointerId);$('diagram').classList.add('panning');}
 $('diagram').addEventListener('wheel',e=>{
  e.preventDefault();
  const board=$('diagram'),matrix=board.getScreenCTM();if(!matrix)return;
