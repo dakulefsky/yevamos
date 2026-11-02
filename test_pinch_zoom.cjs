@@ -9,30 +9,31 @@ const {chromium,executablePath}=require('./browser_support.cjs');
   const errors=[];page.on('pageerror',e=>errors.push(String(e)));
   await page.goto('http://127.0.0.1:'+server.address().port);
   const box=await page.locator('#diagram').boundingBox();
-  await page.evaluate(()=>{
-   window.__touchTrace=[];
-   for(const type of ['pointerdown','pointermove','pointerup','touchstart','touchmove','touchend']){
-    document.addEventListener(type,e=>window.__touchTrace.push({type,pointerType:e.pointerType||null,touches:e.touches?.length??null}),true);
-   }
-  });
-  const cdp=await page.context().newCDPSession(page);
-  await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:2});
-  const y=box.y+box.height*.48;
-  const touch=(type,points)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints:points.map(p=>({id:p.id,x:p.x,y:p.y,radiusX:2,radiusY:2,force:1}))});
-  const before=await page.evaluate(()=>({...view()}));
-  const first={id:1,x:box.x+box.width*.25,y},second={id:2,x:box.x+box.width*.45,y};
-  await touch('touchStart',[first]);
-  await touch('touchStart',[second]);
-  await touch('touchMove',[{...first,x:box.x+box.width*.10},{...second,x:box.x+box.width*.80}]);
-  await page.waitForTimeout(50);
-  const zoomed=await page.evaluate(()=>({...view()}));
-  const trace=await page.evaluate(()=>window.__touchTrace);
-  assert(trace.some(e=>e.type==='touchstart'&&e.touches===2),'browser must deliver a native two-touch start; trace='+JSON.stringify(trace));
-  assert(trace.some(e=>e.type==='touchmove'&&e.touches===2),'browser must deliver a native two-touch move; trace='+JSON.stringify(trace));
-  assert(zoomed.zoom>before.zoom*2,'two-finger spread must zoom in; before='+JSON.stringify(before)+' after='+JSON.stringify(zoomed)+' trace='+JSON.stringify(trace));
-  assert(zoomed.cx!==before.cx||zoomed.cy!==before.cy,'zoom should remain anchored to the fingers');
-  await touch('touchCancel',[]);
+  const result=await page.evaluate(({x,y,w})=>{
+   const board=document.getElementById('diagram');
+   const makeTouches=points=>points.map(p=>new Touch({identifier:p.id,target:board,clientX:p.x,clientY:p.y,pageX:p.x,pageY:p.y,screenX:p.x,screenY:p.y}));
+   const emit=(type,active,changed=active)=>{
+    const touches=makeTouches(active),changedTouches=makeTouches(changed);
+    return board.dispatchEvent(new TouchEvent(type,{bubbles:true,cancelable:true,touches,targetTouches:touches,changedTouches}));
+   };
+   const before={...view()},y=y;
+   const first={id:1,x:x+w*.25,y},second={id:2,x:x+w*.45,y};
+   emit('touchstart',[first,second]);
+   emit('touchmove',[{...first,x:x+w*.10},{...second,x:x+w*.80}]);
+   const zoomed={...view()};
+   emit('touchend',[second],[first]);
+   const afterLift={...view()};
+   emit('touchmove',[{...second,x:x+w*.95}],[{...second,x:x+w*.95}]);
+   const afterOneFinger={...view()};
+   emit('touchend',[],[second]);
+   return {before,zoomed,afterLift,afterOneFinger};
+  },{x:box.x,y:box.y,w:box.width});
+  assert(result.zoomed.zoom>result.before.zoom*2,'two-finger spread must zoom in; '+JSON.stringify(result));
+  assert(result.zoomed.cx!==result.before.cx||result.zoomed.cy!==result.before.cy,'zoom should remain anchored to the fingers');
+  assert.equal(result.afterOneFinger.zoom,result.afterLift.zoom,'remaining finger must not continue zooming');
+  assert.equal(result.afterOneFinger.cx,result.afterLift.cx,'remaining finger must not pan the diagram');
+  assert.equal(result.afterOneFinger.cy,result.afterLift.cy,'remaining finger must not pan the diagram');
   assert.deepEqual(errors,[]);
-  console.log('PASS: browser-generated native multi-touch input reaches the canvas and pinches to zoom.');
+  console.log('PASS: two-touch TouchEvents zoom the canvas and the remaining finger cannot resume movement.');
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1});
