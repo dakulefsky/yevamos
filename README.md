@@ -1,3 +1,7 @@
+## 0.8.7 — pinch to zoom
+
+Two-finger pinch gestures zoom the family canvas around the midpoint between the fingers. Pinching does not accidentally drag people or move the canvas; existing one-finger interactions, wheel/trackpad panning, arrow-key zoom, zoom buttons and fit-family controls remain available.
+
 ## 0.8.5 — store update
 
 Manifest ID: `com.dantheman.yevamos-family` for a separate store listing. Author: DanTheMan. Existing cases may need to be transferred using backup/import. Includes the death banners and simplified person bubbles from 0.8.4.
