@@ -102,7 +102,6 @@ const board=$('diagram');
 const activeTouchPointers=new Set();
 let pointerPinchActive=false,touchPinch=null,touchGestureActive=false;
 function consumeTouchEvent(e){if(e.cancelable)e.preventDefault();e.stopImmediatePropagation();}
-function consumePointerEvent(e){if(e.cancelable)e.preventDefault();e.stopImmediatePropagation();}
 function worldAtScreen(x,y,v,r){
  const unit=1200/(r.width*v.zoom);
  return {x:v.cx+(x-(r.left+r.width/2))*unit,y:v.cy+(y-(r.top+r.height/2))*unit};
@@ -122,7 +121,7 @@ document.addEventListener('pointerdown',e=>{
  if(e.pointerType!=='touch'||!board.contains(e.target))return;
  activeTouchPointers.add(e.pointerId);
  if(activeTouchPointers.size<2)return;
- consumePointerEvent(e);
+ e.stopImmediatePropagation();
  if(!pointerPinchActive){
   drag=null;panning=null;board.classList.remove('panning');
   pointerPinchActive=true;
@@ -130,11 +129,11 @@ document.addEventListener('pointerdown',e=>{
 },{capture:true});
 document.addEventListener('pointermove',e=>{
  if(e.pointerType!=='touch'||!activeTouchPointers.has(e.pointerId)||!pointerPinchActive)return;
- consumePointerEvent(e);
+ e.stopImmediatePropagation();
 },{capture:true});
 function finishPointerGesture(e){
  if(e.pointerType!=='touch'||!activeTouchPointers.has(e.pointerId))return;
- if(pointerPinchActive)consumePointerEvent(e);
+ if(pointerPinchActive)e.stopImmediatePropagation();
  activeTouchPointers.delete(e.pointerId);
  if(activeTouchPointers.size===0)pointerPinchActive=false;
 }
