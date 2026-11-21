@@ -12,7 +12,6 @@ const {chromium,executablePath}=require('./browser_support.cjs');
    const c=current(),a=FamilyModel.person(c,'male',400,400),b=FamilyModel.person(c,'female',700,400);
    FamilyModel.connect(c,a.id,b.id,'marriage');render();return {a:a.id,b:b.id};
   });
-  const first=page.locator('#diagram .person').filter({has:page.locator('title')}).first();
   await page.locator('#diagram .person').first().click();
   assert.equal(await page.locator('#edit-selected').isEnabled(),true,'selecting a person enables explicit edit');
   assert.equal(await page.locator('#remove-selected').isEnabled(),true,'selecting a person enables explicit delete');
