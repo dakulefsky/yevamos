@@ -51,3 +51,7 @@ dialog{max-height:90dvh;overflow:auto}
 .board:fullscreen .canvas-tip,.board.expanded .canvas-tip{bottom:max(12px,env(safe-area-inset-bottom));}
 body:has(.board.expanded){overflow:hidden}
 @media(max-width:550px){.board:fullscreen .canvas-controls,.board.expanded .canvas-controls{max-width:calc(100vw - 24px);}}
+
+/* Explicit selected-person actions make editing and removal discoverable without mouse gestures. */
+.toolbar #remove-selected{color:var(--color-deceased)}
+.toolbar #edit-selected:disabled,.toolbar #remove-selected:disabled{opacity:.42}
