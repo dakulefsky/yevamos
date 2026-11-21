@@ -55,3 +55,6 @@ body:has(.board.expanded){overflow:hidden}
 /* Explicit selected-person actions make editing and removal discoverable without mouse gestures. */
 .toolbar #remove-selected{color:var(--color-deceased)}
 .toolbar #edit-selected:disabled,.toolbar #remove-selected:disabled{opacity:.42}
+
+.toolbar #selection-status{flex:0 0 auto;padding:6px 10px;border:1px solid var(--color-border);border-radius:var(--radius-pill);background:var(--color-panel);color:var(--color-primary);font-weight:600;min-width:110px;text-align:center}.toolbar #selection-status:empty{display:none}.danger-action{color:#fff;background:var(--color-deceased);border-color:var(--color-deceased)}.danger-action:hover{background:var(--color-deceased);filter:brightness(1.08)}
+@media(max-width:550px){.toolbar #selection-status{order:4;flex-basis:100%;text-align:start}}
